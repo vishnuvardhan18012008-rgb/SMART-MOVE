@@ -1,0 +1,1464 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>SMART MOVE — AI Bus Safety Control Center</title>
+    <style>
+      :root {
+        --bg: #04070d;
+        --pn: #0a111c;
+        --ln: #16283d;
+        --g: #2fe08a;
+        --a: #ffb020;
+        --r: #ff3b4e;
+        --c: #35c8ff;
+        --tx: #e6eef8;
+        --dim: #7489a2;
+        --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+        --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        box-sizing: border-box;
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+      }
+      html {
+        scroll-padding-top: env(safe-area-inset-top, 0px);
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--tx);
+        font: 13px/1.4 var(--sans);
+        min-height: 100vh;
+        background-image:
+          linear-gradient(#0d1a2a55 1px, transparent 1px),
+          linear-gradient(90deg, #0d1a2a55 1px, transparent 1px);
+        background-size: 40px 40px;
+      }
+      body:after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background: repeating-linear-gradient(#0000 0 2px, #0000000d 2px 3px);
+        z-index: 50;
+      }
+      .m {
+        font-family: var(--mono);
+      }
+      .dim {
+        color: var(--dim);
+      }
+      .ok {
+        --s: var(--g);
+      }
+      .warn {
+        --s: var(--a);
+      }
+      .crit {
+        --s: var(--r);
+      }
+      .NORMAL {
+        --s: var(--g);
+      }
+      .WARNING {
+        --s: var(--a);
+      }
+      .CRITICAL {
+        --s: var(--r);
+      }
+      #boot {
+        position: fixed;
+        inset: 0;
+        background: #000;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.8s;
+        font-family: var(--mono);
+      }
+      #boot h1 {
+        letter-spacing: 0.5em;
+        font-size: 38px;
+        font-weight: 300;
+        opacity: 0;
+        animation: fi 1s 0.2s forwards;
+      }
+      #boot h2 {
+        letter-spacing: 0.35em;
+        font-size: 12px;
+        color: var(--c);
+        margin: 8px 0 26px;
+        opacity: 0;
+        animation: fi 1s 0.6s forwards;
+      }
+      #bl {
+        min-height: 150px;
+        font-size: 12px;
+        color: var(--dim);
+        line-height: 1.8;
+      }
+      #bl b {
+        color: var(--g);
+      }
+      @keyframes fi {
+        to {
+          opacity: 1;
+        }
+      }
+      header {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        gap: 16px;
+        padding: 10px 18px;
+        border-bottom: 1px solid var(--ln);
+        background: #060c15ee;
+        position: sticky;
+        top: 0;
+        z-index: 20;
+      }
+      .brand {
+        font-weight: 700;
+        letter-spacing: 0.3em;
+        font-size: 17px;
+      }
+      .brand small {
+        display: block;
+        font: 10px var(--mono);
+        letter-spacing: 0.2em;
+        color: var(--c);
+        font-weight: 400;
+      }
+      .dot {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--s, var(--g));
+        box-shadow: 0 0 8px var(--s, var(--g));
+        animation: pl 2s infinite;
+        margin-right: 6px;
+      }
+      @keyframes pl {
+        50% {
+          opacity: 0.35;
+        }
+      }
+      .mid {
+        text-align: center;
+        font-family: var(--mono);
+        letter-spacing: 0.4em;
+        font-size: 14px;
+      }
+      .mid span {
+        display: block;
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        color: var(--dim);
+      }
+      .rt {
+        text-align: right;
+        font: 11px var(--mono);
+        color: var(--dim);
+      }
+      .rt b {
+        color: var(--tx);
+        font-size: 18px;
+        font-weight: 400;
+      }
+      button {
+        font: 600 11px var(--mono);
+        letter-spacing: 0.08em;
+        color: var(--tx);
+        background: #0e1b2c;
+        border: 1px solid var(--ln);
+        padding: 8px 12px;
+        cursor: pointer;
+        transition: 0.2s;
+      }
+      button:hover {
+        border-color: var(--c);
+        box-shadow: 0 0 12px #35c8ff33;
+      }
+      button:disabled {
+        opacity: 0.5;
+        cursor: wait;
+      }
+      .sim {
+        border-color: var(--c);
+        color: var(--c);
+        margin-left: 12px;
+      }
+      main {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 12px;
+        padding: 12px 18px 24px;
+      }
+      .p {
+        background: var(--pn);
+        border: 1px solid var(--ln);
+        position: relative;
+        padding: 12px;
+        min-width: 0;
+      }
+      .p:before {
+        content: "";
+        position: absolute;
+        left: -1px;
+        top: -1px;
+        width: 14px;
+        height: 14px;
+        border-left: 2px solid var(--c);
+        border-top: 2px solid var(--c);
+      }
+      .p h3 {
+        font: 600 11px var(--mono);
+        letter-spacing: 0.2em;
+        color: var(--c);
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .tag {
+        font: 10px var(--mono);
+        color: var(--a);
+        border: 1px solid #ffb02066;
+        padding: 1px 6px;
+        letter-spacing: 0.08em;
+      }
+      .fl {
+        outline: 2px solid var(--c);
+        animation: fl 1.6s;
+      }
+      @keyframes fl {
+        to {
+          outline-color: transparent;
+        }
+      }
+      .sw {
+        animation: sw 0.5s;
+      }
+      @keyframes sw {
+        from {
+          opacity: 0.3;
+          transform: translateY(6px);
+        }
+      }
+      .c8 {
+        grid-column: span 8;
+      }
+      .c4 {
+        grid-column: span 4;
+      }
+      .c12 {
+        grid-column: span 12;
+      }
+      #strip {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: linear-gradient(90deg, #35c8ff18, transparent);
+        border-left: 3px solid var(--s);
+        padding: 8px 14px;
+        font-family: var(--mono);
+        letter-spacing: 0.12em;
+      }
+      #stepb {
+        margin-left: auto;
+        color: var(--c);
+        font-size: 11px;
+      }
+      svg text {
+        font-family: var(--mono);
+      }
+      #map {
+        width: 100%;
+        display: block;
+        background: #050a12;
+      }
+      .bus {
+        cursor: pointer;
+      }
+      .bus .rg {
+        fill: none;
+        stroke: var(--s);
+        stroke-width: 2;
+        animation: rg 2s infinite;
+        transform-box: fill-box;
+        transform-origin: center;
+      }
+      @keyframes rg {
+        0% {
+          opacity: 1;
+          transform: scale(0.8);
+        }
+        100% {
+          opacity: 0;
+          transform: scale(1.8);
+        }
+      }
+      .crit .rg {
+        animation-duration: 1s;
+      }
+      .al {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 2px 10px;
+        padding: 8px;
+        border-left: 3px solid var(--s);
+        background: #0d1725;
+        margin-bottom: 6px;
+        cursor: pointer;
+        transition: 0.2s;
+        animation: sw 0.5s;
+      }
+      .al:hover,
+      .al.on {
+        background: #12233a;
+      }
+      .al.CRITICAL {
+        animation: cp 2.4s infinite;
+      }
+      @keyframes cp {
+        50% {
+          box-shadow: inset 0 0 22px #ff3b4e33;
+        }
+      }
+      .sv {
+        font: 700 10px var(--mono);
+        color: var(--s);
+        letter-spacing: 0.1em;
+      }
+      .al small {
+        grid-column: 2;
+        color: var(--dim);
+        font: 10px var(--mono);
+      }
+      #alerts {
+        max-height: 430px;
+        overflow: auto;
+      }
+      .big {
+        font: 300 26px var(--mono);
+      }
+      .lb {
+        font: 10px var(--mono);
+        color: var(--dim);
+        letter-spacing: 0.12em;
+      }
+      .hg {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .hg div {
+        background: #0d1725;
+        padding: 6px 8px;
+        border-bottom: 2px solid var(--s);
+      }
+      canvas {
+        width: 100%;
+        display: block;
+        background: #050a12;
+        border: 1px solid var(--ln);
+      }
+      .chips {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .chips span {
+        flex: 1;
+        text-align: center;
+        padding: 6px 2px;
+        font: 10px var(--mono);
+        border: 1px solid var(--ln);
+        color: var(--dim);
+        transition: 0.4s;
+      }
+      .chips span.on {
+        color: var(--a);
+        border-color: var(--a);
+        box-shadow: 0 0 10px #ffb02044;
+      }
+      .chips span.go {
+        color: var(--g);
+        border-color: var(--g);
+      }
+      .pipe {
+        display: flex;
+        justify-content: space-between;
+        position: relative;
+        padding: 14px 0;
+      }
+      .pipe:before {
+        content: "";
+        position: absolute;
+        left: 5%;
+        right: 5%;
+        top: 50%;
+        height: 2px;
+        background: var(--ln);
+      }
+      .pd {
+        position: absolute;
+        top: calc(50% - 4px);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--c);
+        box-shadow: 0 0 12px var(--c);
+        animation: mv 3.2s linear infinite;
+      }
+      @keyframes mv {
+        from {
+          left: 5%;
+        }
+        to {
+          left: 95%;
+        }
+      }
+      .nd {
+        position: relative;
+        z-index: 1;
+        width: 19%;
+        background: var(--pn);
+        border: 1px solid var(--ln);
+        padding: 10px;
+        text-align: center;
+        transition: 0.4s;
+      }
+      .nd b {
+        display: block;
+        font: 600 11px var(--mono);
+        letter-spacing: 0.1em;
+      }
+      .nd small {
+        color: var(--dim);
+        font-size: 10px;
+      }
+      .nd.hi {
+        border-color: var(--s, var(--a));
+        box-shadow: 0 0 18px
+          color-mix(in srgb, var(--s, var(--a)) 40%, transparent);
+        transform: translateY(-3px);
+      }
+      .sg {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .sn {
+        display: flex;
+        justify-content: space-between;
+        background: #0d1725;
+        padding: 6px 8px;
+        font: 10px var(--mono);
+        border: 1px solid transparent;
+      }
+      .sn.h {
+        border-color: var(--a);
+        background: #2a1f0a;
+      }
+      .sn em {
+        font-style: normal;
+        color: var(--g);
+      }
+      .stp {
+        display: flex;
+        gap: 4px;
+        margin: 6px 0 12px;
+      }
+      .stp div {
+        flex: 1;
+        text-align: center;
+        padding: 8px 2px;
+        font: 10px var(--mono);
+        letter-spacing: 0.1em;
+        border-bottom: 3px solid var(--ln);
+        color: var(--dim);
+        transition: 0.4s;
+      }
+      .stp div.on {
+        border-color: var(--c);
+        color: var(--tx);
+      }
+      .emb {
+        padding: 10px;
+        border: 1px solid var(--s);
+        font: 700 15px var(--mono);
+        letter-spacing: 0.15em;
+        color: var(--s);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .emb.crit {
+        animation: cp 1.6s infinite;
+        background: #ff3b4e10;
+      }
+      .btns {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 12px 0;
+      }
+      #det {
+        background: #0d1725;
+        padding: 8px;
+        font-size: 11px;
+        min-height: 70px;
+      }
+      #det li {
+        margin-left: 16px;
+        color: var(--dim);
+      }
+      #tl {
+        max-height: 300px;
+        overflow: auto;
+      }
+      .ev {
+        display: grid;
+        grid-template-columns: 64px 52px 1fr;
+        gap: 6px;
+        padding: 6px 0;
+        border-bottom: 1px solid var(--ln);
+        font-size: 11px;
+        animation: sw 0.5s;
+      }
+      #modal {
+        position: fixed;
+        inset: 0;
+        background: #000c;
+        z-index: 60;
+        display: none;
+        align-items: center;
+        justify-content: center;
+      }
+      #modal.on {
+        display: flex;
+      }
+      #modal .p {
+        width: min(560px, 92vw);
+        max-height: 80vh;
+        overflow: auto;
+      }
+      @media (max-width: 1100px) {
+        .c8,
+        .c4 {
+          grid-column: span 12;
+        }
+        .pipe {
+          flex-direction: column;
+          gap: 8px;
+        }
+        .nd {
+          width: 100%;
+        }
+        .pipe:before,
+        .pd {
+          display: none;
+        }
+        header {
+          grid-template-columns: 1fr;
+        }
+        .mid,
+        .rt {
+          text-align: left;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="boot">
+      <h1>SMART MOVE</h1>
+      <h2>AI BUS SAFETY CONTROL CENTER</h2>
+      <div id="bl"></div>
+    </div>
+    <header>
+      <div class="brand">
+        SMART MOVE<small>AI BUS SAFETY CONTROL CENTER</small
+        ><span class="m" style="font-size: 11px; color: var(--g)"
+          ><i class="dot"></i>SYSTEM ONLINE</span
+        >
+      </div>
+      <div class="mid">
+        LIVE CONTROL ROOM<span>TECHFORGE 612 · DEMO / SIMULATION</span>
+      </div>
+      <div class="rt">
+        <b id="clk">09:41:22</b>
+        <button class="sim" id="simb" onclick="runSim()">
+          ▶ RUN SAFETY SIMULATION</button
+        ><br />Network: <span style="color: var(--g)">ONLINE</span> · Local
+        Safety Mode: <span style="color: var(--g)">READY</span><br />Last
+        synchronization: <span id="syn">2</span> sec ago
+      </div>
+    </header>
+    <main>
+      <div class="c12 p" id="strip" style="grid-column: span 12"></div>
+      <section class="p c8" id="pmap">
+        <h3>LIVE FLEET / BUS NETWORK <span class="tag">DEMO FLEET</span></h3>
+        <svg id="map" viewBox="0 0 800 420">
+          <defs>
+            <filter id="gl"><feGaussianBlur stdDeviation="4" /></filter>
+          </defs>
+          <g stroke="#12233a" stroke-width="1">
+            <path
+              d="M0 60H800M0 160H800M0 280H800M0 390H800M120 0V420M240 0V420M420 0V420M640 0V420"
+            />
+          </g>
+          <g fill="#0b1524" stroke="#12233a">
+            <rect x="360" y="250" width="120" height="60" />
+            <rect x="600" y="110" width="110" height="80" />
+            <rect x="130" y="270" width="90" height="70" />
+            <rect x="380" y="60" width="100" height="90" />
+          </g>
+          <g
+            fill="none"
+            stroke="#1d3652"
+            stroke-width="7"
+            stroke-linecap="round"
+          >
+            <path id="p0" d="M40 90H300Q340 90 340 130V300H760" />
+            <path
+              id="p1"
+              d="M60 360H220Q260 360 260 320V200H520Q560 200 560 160V50"
+            />
+            <path
+              id="p2"
+              d="M760 90H560Q520 90 520 130V240H120Q80 240 80 200V150"
+            />
+          </g>
+          <path
+            id="rt"
+            fill="none"
+            stroke="#35c8ff"
+            stroke-width="4"
+            filter="url(#gl)"
+            opacity=".8"
+          />
+          <path
+            id="rt2"
+            fill="none"
+            stroke="#35c8ff"
+            stroke-width="2"
+            stroke-dasharray="6 6"
+          />
+          <g id="bg"></g>
+        </svg>
+      </section>
+      <section class="p c4">
+        <h3>LIVE SAFETY ALERTS <span class="tag">DEMO</span></h3>
+        <div id="alerts"></div>
+      </section>
+      <section class="p c4" id="phe">
+        <h3>
+          DRIVER HEALTH MONITORING <span class="tag">SIMULATION DATA</span>
+        </h3>
+        <canvas id="ecg" width="400" height="120"></canvas>
+        <div class="hg" id="hg"></div>
+      </section>
+      <section class="p c4" id="pfo">
+        <h3>FOOTBOARD AI MONITOR <span class="tag">DEMO FEED</span></h3>
+        <canvas id="cam" width="400" height="215"></canvas>
+        <div class="hg" id="fg"></div>
+      </section>
+      <section class="p c4" id="pdo">
+        <h3>SMART DOOR SAFETY <span id="dw"></span></h3>
+        <svg
+          viewBox="0 0 300 120"
+          style="width: 100%; background: #050a12; border: 1px solid var(--ln)"
+        >
+          <rect
+            x="40"
+            y="10"
+            width="220"
+            height="80"
+            fill="none"
+            stroke="#2a4260"
+            stroke-width="3"
+          />
+          <rect
+            id="dl"
+            x="42"
+            y="12"
+            width="108"
+            height="76"
+            fill="#0f2238"
+            stroke="#35c8ff"
+          />
+          <rect
+            id="dr"
+            x="150"
+            y="12"
+            width="108"
+            height="76"
+            fill="#0f2238"
+            stroke="#35c8ff"
+          />
+          <rect
+            x="40"
+            y="100"
+            width="220"
+            height="10"
+            fill="#0d1725"
+            stroke="#2a4260"
+          />
+          <rect
+            id="pist"
+            x="40"
+            y="102"
+            width="110"
+            height="6"
+            fill="var(--c)"
+          />
+          <text x="46" y="118" font-size="7" fill="#7489a2">
+            PNEUMATIC CYLINDER
+          </text>
+        </svg>
+        <div class="hg" id="dg"></div>
+        <div class="chips" id="dch">
+          <span>DETECTION</span><span>SAFETY DECISION</span
+          ><span>AUTO RESPONSE</span>
+        </div>
+      </section>
+      <section class="p c12">
+        <h3>
+          SYSTEM SAFETY PIPELINE
+          <span class="tag">DETECT → ANALYZE → DECIDE → ALERT → ACT</span>
+        </h3>
+        <div class="pipe" id="pipe">
+          <i class="pd"></i><i class="pd" style="animation-delay: -1.6s"></i>
+        </div>
+      </section>
+      <section class="p c4">
+        <h3>SYSTEM STATUS</h3>
+        <div class="sg" id="sg"></div>
+      </section>
+      <section class="p c4" id="pem">
+        <h3>EMERGENCY RESPONSE</h3>
+        <div id="em"></div>
+      </section>
+      <section class="p c4">
+        <h3>SAFETY EVENT TIMELINE</h3>
+        <div id="tl"></div>
+      </section>
+    </main>
+    <div id="modal" onclick="this.classList.remove('on')">
+      <div class="p" onclick="event.stopPropagation()">
+        <h3>
+          SAFETY LOG
+          <button onclick="modal.classList.remove('on')">CLOSE</button>
+        </h3>
+        <div id="lg"></div>
+      </div>
+    </div>
+    <script>
+      /* ===== DATA LAYER: DEMO DATA. Replace via adapter below with ESP32 / API / WebSocket ===== */
+      const DEMO = {
+        buses: [
+          {
+            id: 101,
+            path: 0,
+            t: 0.15,
+            sp: 0.0011,
+            st: "warn",
+            foot: "safe",
+            hp: "ok",
+            door: "OPEN",
+          },
+          {
+            id: 102,
+            path: 1,
+            t: 0.3,
+            sp: 0.0009,
+            st: "warn",
+            foot: "warn",
+            hp: "ok",
+            door: "SAFE",
+          },
+          {
+            id: 103,
+            path: 2,
+            t: 0.2,
+            sp: 0.0012,
+            st: "ok",
+            foot: "safe",
+            hp: "ok",
+            door: "SAFE",
+          },
+          {
+            id: 104,
+            path: 1,
+            t: 0.7,
+            sp: 0.001,
+            st: "crit",
+            foot: "safe",
+            hp: "anom",
+            door: "SAFE",
+          },
+          {
+            id: 105,
+            path: 0,
+            t: 0.6,
+            sp: 0.0008,
+            st: "ok",
+            foot: "safe",
+            hp: "ok",
+            door: "SAFE",
+          },
+        ],
+        alerts: [
+          {
+            bus: 104,
+            sev: "CRITICAL",
+            type: "Driver Health Anomaly Detected",
+            src: "ECG · HR · SpO₂ · MPU6050",
+            time: "09:41:22",
+            status: "ACTIVE",
+            panel: "hp",
+            act: "Trigger in-bus warning, notify control room, prepare driver assistance.",
+          },
+          {
+            bus: 102,
+            sev: "WARNING",
+            type: "Footboard Object Detected",
+            src: "Ultrasonic · Camera · YOLOv8",
+            time: "09:41:18",
+            status: "ACTIVE",
+            panel: "foot",
+            act: "Hold door closing and warn passengers in-bus.",
+          },
+          {
+            bus: 101,
+            sev: "WARNING",
+            type: "Unsafe Door Condition",
+            src: "Door control · Solenoid valve",
+            time: "09:40:51",
+            status: "ACTIVE",
+            panel: "door",
+            act: "Actuate pneumatic cylinder for automatic safe closing.",
+          },
+          {
+            bus: 103,
+            sev: "NORMAL",
+            type: "All Safety Systems Operational",
+            src: "All sensors",
+            time: "09:40:43",
+            status: "NORMAL",
+            panel: "",
+            act: "No action required.",
+          },
+        ],
+        events: [
+          { t: "09:41:22", bus: 104, m: "Driver health monitoring event" },
+          { t: "09:41:18", bus: 102, m: "Footboard object detected" },
+          { t: "09:40:51", bus: 101, m: "Door safety check completed" },
+          { t: "09:40:43", bus: 103, m: "All systems normal" },
+        ],
+        sensors: [
+          ["FOOTBOARD SENSOR", "ONLINE", "foot"],
+          ["CAMERA", "ONLINE", "foot"],
+          ["YOLOv8", "ACTIVE", "foot"],
+          ["ECG", "CONNECTED", "hp"],
+          ["HR SENSOR", "CONNECTED", "hp"],
+          ["SpO₂", "CONNECTED", "hp"],
+          ["MPU6050", "CONNECTED", "hp"],
+          ["DOOR CONTROL", "READY", "door"],
+          ["ESP32", "ONLINE", ""],
+          ["NETWORK", "ONLINE", ""],
+          ["LOCAL SAFETY MODE", "READY", ""],
+        ],
+      };
+      /* Future: connectLive(url){ const ws=new WebSocket(url); ws.onmessage=e=>applyTelemetry(JSON.parse(e.data)); }  applyTelemetry mutates DEMO.* then calls render() */
+      const $ = (s) => document.querySelector(s),
+        bs = DEMO.buses,
+        B = (id) => bs.find((b) => b.id == id);
+      let sel = 104,
+        foc = 0,
+        hl = "",
+        plHi = -1,
+        plSev = "warn",
+        clock = 9 * 3600 + 41 * 60 + 22,
+        em = { on: true, stage: 2, t: 8, ack: false, bus: 104 },
+        running = false,
+        step = "";
+      const pad = (n) => String(n).padStart(2, "0"),
+        tstr = () =>
+          pad((clock / 3600) | 0) +
+          ":" +
+          pad(((clock / 60) % 60) | 0) +
+          ":" +
+          pad(clock % 60);
+      const A = DEMO.alerts,
+        EV = DEMO.events;
+      const addA = (bus, sev, type, src, panel, act) => {
+        A.unshift({
+          bus,
+          sev,
+          type,
+          src,
+          time: tstr(),
+          status: "ACTIVE",
+          panel,
+          act,
+        });
+        foc = 0;
+      };
+      const ev = (bus, m) => EV.unshift({ t: tstr(), bus, m });
+      /* boot */
+      const BL = [
+        ["ESP32", "ONLINE"],
+        ["SENSORS", "ONLINE"],
+        ["CAMERAS", "ONLINE"],
+        ["YOLOv8", "ACTIVE"],
+        ["HEALTH", "ONLINE"],
+        ["DOOR CONTROL", "READY"],
+      ];
+      setTimeout(() => {
+        $("#bl").innerHTML = "SYSTEM INITIALIZING...<br>";
+      }, 900);
+      BL.forEach((l, i) =>
+        setTimeout(
+          () =>
+            ($("#bl").innerHTML +=
+              l[0].padEnd(14, ".") + " <b>" + l[1] + "</b><br>"),
+          1200 + i * 230,
+        ),
+      );
+      setTimeout(
+        () => ($("#bl").innerHTML += "<br><b>ALL SAFETY SYSTEMS READY</b>"),
+        2700,
+      );
+      setTimeout(() => {
+        $("#boot").style.opacity = 0;
+        setTimeout(() => $("#boot").remove(), 800);
+      }, 3500);
+      /* map */
+      const paths = ["p0", "p1", "p2"].map((i) => document.getElementById(i));
+      $("#bg").innerHTML = bs
+        .map(
+          (b) =>
+            `<g class="bus" id="b${b.id}" onclick="pick(${b.id})"><circle class="rg" r="14"/><circle r="8" fill="var(--s)"/><rect x="-6" y="-3" width="12" height="6" fill="#04070d"/><text y="-17" text-anchor="middle" font-size="10" fill="#e6eef8">BUS ${b.id}</text></g>`,
+        )
+        .join("");
+      function pick(id) {
+        sel = id;
+        foc = Math.max(
+          0,
+          A.findIndex((a) => a.bus == id),
+        );
+        render(true);
+      }
+      function mapTick() {
+        bs.forEach((b) => {
+          b.t = (b.t + b.sp) % 1;
+          const p = paths[b.path],
+            pt = p.getPointAtLength(b.t * p.getTotalLength());
+          const g = $("#b" + b.id);
+          g.setAttribute("transform", `translate(${pt.x},${pt.y})`);
+        });
+      }
+      /* render */
+      const stC = (b) => b.st;
+      function render(sw) {
+        const b = B(sel),
+          L = { ok: "NORMAL", warn: "WARNING", crit: "CRITICAL" };
+        bs.forEach((x) => {
+          const g = $("#b" + x.id);
+          g.setAttribute("class", "bus " + x.st);
+          g.querySelector("circle:nth-child(2)").setAttribute(
+            "r",
+            x.id == sel ? 11 : 8,
+          );
+        });
+        const p = paths[b.path];
+        ["rt", "rt2"].forEach((i) =>
+          $("#" + i).setAttribute("d", p.getAttribute("d")),
+        );
+        $("#strip").className = "c12 p " + b.st;
+        $("#strip").style.setProperty(
+          "--s",
+          `var(--${{ ok: "g", warn: "a", crit: "r" }[b.st]})`,
+        );
+        $("#strip").innerHTML =
+          `<span>BUS ${b.id} — DETAILED SAFETY VIEW</span><span style="color:var(--s)"><i class="dot" style="--s:var(--s)"></i>${L[b.st]}</span><span class="dim" style="font-size:11px">Click any bus or alert to change focus</span><span id="stepb">${step}</span>`;
+        if (sw)
+          ["phe", "pfo", "pdo", "pem"].forEach((i) => {
+            const e = $("#" + i);
+            e.classList.remove("sw");
+            void e.offsetWidth;
+            e.classList.add("sw");
+          });
+        $("#alerts").innerHTML = A.map(
+          (a, i) =>
+            `<div class="al ${a.sev} ${i == foc ? "on" : ""}" onclick="alertClick(${i})"><span class="sv">${a.sev}</span><span><b>BUS ${a.bus}</b> · ${a.type}</span><small>${a.time} · ${a.src} · ${a.status}</small></div>`,
+        ).join("");
+        $("#tl").innerHTML = EV.slice(0, 12)
+          .map(
+            (e) =>
+              `<div class="ev"><span class="m dim">${e.t}</span><b class="m">BUS ${e.bus}</b><span>${e.m}</span></div>`,
+          )
+          .join("");
+        $("#sg").innerHTML = DEMO.sensors
+          .map(
+            (s) =>
+              `<div class="sn ${s[2] && s[2] == hl ? "h" : ""}"><span><i class="dot" style="--s:${s[2] && s[2] == hl ? "var(--a)" : "var(--g)"}"></i>${s[0]}</span><em>${s[1]}</em></div>`,
+          )
+          .join("");
+        const hs = b.foot == "safe" ? "ok" : b.foot;
+        $("#fg").innerHTML =
+          `<div class="${hs}"><span class="lb">AI STATUS</span><br>YOLOv8 ACTIVE</div><div class="${hs}"><span class="lb">DETECTION</span><br>${{ ok: "SAFE", warn: "WARNING", crit: "CRITICAL" }[hs]}</div><div class="${hs}"><span class="lb">ZONE</span><br>${b.foot == "safe" ? "CLEAR" : "DANGER"}</div>`;
+        const dm = { SAFE: "ok", OPEN: "warn", CLOSING: "warn", LOCKED: "ok" }[
+          b.door
+        ];
+        $("#dg").innerHTML =
+          `<div class="ok"><span class="lb">SOLENOID VALVE</span><br>● ${b.door == "CLOSING" ? "ENERGIZED" : "READY"}</div><div class="ok"><span class="lb">PNEUMATIC CYL.</span><br>● ACTIVE</div><div class="${dm}"><span class="lb">DOOR STATUS</span><br>${b.door}</div>`;
+        $("#dw").innerHTML =
+          b.door == "OPEN" || b.door == "CLOSING"
+            ? '<span class="tag" style="color:var(--r);border-color:var(--r)">UNSAFE DOOR CONDITION</span>'
+            : "";
+        const open = b.door == "OPEN",
+          cl = b.door == "CLOSING",
+          x = open ? 40 : 0;
+        [
+          ["dl", -x],
+          ["dr", x],
+        ].forEach(([i, v]) => {
+          const e = $("#" + i);
+          e.style.transition = `transform ${cl ? 1.3 : 0.4}s`;
+          e.style.transform = `translateX(${v}px)`;
+        });
+        $("#pist").style.transition = `transform ${cl ? 1.3 : 0.4}s`;
+        $("#pist").style.transform = `translateX(${open ? 0 : 110}px)`;
+        const ch = $("#dch").children;
+        ch[0].className = open || cl ? "on" : "";
+        ch[1].className = open || cl ? "on" : "";
+        ch[2].className = cl ? "on" : b.door == "LOCKED" ? "go" : "";
+        $("#pipe")
+          .querySelectorAll(".nd")
+          .forEach((n) => n.remove());
+        [
+          "SENSORS / CAMERA|Ultrasonic · Camera · ECG · HR · SpO₂ · MPU6050",
+          "DATA COLLECTION|ESP32 gateway",
+          "AI + HEALTH ANALYSIS|YOLOv8 + health analysis",
+          "SAFETY DECISION|Multi-sensor confirmation",
+          "ALERT / ACTION|In-bus warning · Door · Control room",
+        ].forEach((s, i) => {
+          const [t, d] = s.split("|");
+          $("#pipe").insertAdjacentHTML(
+            "beforeend",
+            `<div class="nd ${i == plHi ? "hi " + plSev : ""}"><b>${t}</b><small>${d}</small></div>`,
+          );
+        });
+        emRender();
+      }
+      function emRender() {
+        const a = A[foc] || A[0],
+          S = ["DETECTED", "ANALYZED", "ALERTED", "ACTION"],
+          active = em.on && !em.ack;
+        $("#em").innerHTML =
+          `<div class="emb ${active ? "crit" : "ok"}" style="--s:${active ? "var(--r)" : "var(--g)"}"><span>${active ? "EMERGENCY ACTIVE — BUS " + em.bus : em.ack ? "ALERT ACKNOWLEDGED" : "MONITORING MODE"}</span><span style="font-size:20px">00:${pad(em.t)}</span></div><div class="lb" style="text-align:right;margin:3px 0">DEMO RESPONSE TIMER</div>
+ <div class="stp">${S.map((s, i) => `<div class="${em.on && i <= em.stage ? "on" : ""}">${s}</div>`).join("")}</div>
+ <div id="det"><b>BUS ${a.bus} · ${a.type}</b><ul><li>Sensor trigger → ${a.src}</li><li>ESP32 data collection</li><li>YOLOv8 / health analysis</li><li>Safety decision → ${a.sev}</li></ul><div style="margin-top:4px">Recommended action: <span style="color:var(--c)">${a.act}</span></div></div>
+ <div class="btns"><button onclick="ack()">ACKNOWLEDGE ALERT</button><button onclick="view('map')">VIEW BUS</button><button onclick="view('phe')">VIEW DRIVER</button><button onclick="view('pfo')">VIEW CAMERA</button><button onclick="showLog()">SAFETY LOG</button></div>`;
+      }
+      function alertClick(i) {
+        const a = A[i];
+        foc = i;
+        sel = a.bus;
+        hl = a.panel;
+        render(true);
+        if (a.panel) flash({ hp: "phe", foot: "pfo", door: "pdo" }[a.panel]);
+        setTimeout(() => {
+          hl = "";
+          render();
+        }, 4500);
+      }
+      function flash(id) {
+        const e = $("#" + id);
+        e.scrollIntoView({ behavior: "smooth", block: "center" });
+        e.classList.remove("fl");
+        void e.offsetWidth;
+        e.classList.add("fl");
+      }
+      function view(id) {
+        flash(id === "map" ? "pmap" : id);
+        if (id === "map") render(true);
+      }
+      function ack() {
+        const t = A.filter((a) => a.bus == sel && a.status == "ACTIVE");
+        t.forEach((a) => (a.status = "ACKNOWLEDGED"));
+        if (em.on && em.bus == sel) em.ack = true;
+        ev(
+          sel,
+          t.length
+            ? "Alert acknowledged by operator"
+            : "No active alert to acknowledge",
+        );
+        render();
+      }
+      function showLog() {
+        $("#lg").innerHTML = EV.map(
+          (e) =>
+            `<div class="ev"><span class="m dim">${e.t}</span><b class="m">BUS ${e.bus}</b><span>${e.m}</span></div>`,
+        ).join("");
+        modal.classList.add("on");
+      }
+      /* simulation */
+      function pl(i, s) {
+        plHi = i;
+        plSev = s || "warn";
+      }
+      const D = (b) => B(104);
+      const STEPS = [
+        [
+          "All buses SAFE — monitoring",
+          () => {
+            bs.forEach((b) =>
+              Object.assign(b, {
+                st: "ok",
+                foot: "safe",
+                hp: "ok",
+                door: "SAFE",
+              }),
+            );
+            em = { on: false, stage: 0, t: 0, ack: false, bus: 104 };
+            pl(-1);
+            sel = 104;
+            ev(104, "Simulation started: all systems safe");
+          },
+        ],
+        [
+          "BUS 104 footboard camera detects person",
+          () => {
+            D().foot = "warn";
+            pl(0);
+            ev(104, "Footboard object detected (sim)");
+          },
+        ],
+        [
+          "YOLOv8 analysis begins",
+          () => {
+            pl(2);
+          },
+        ],
+        [
+          "Safety decision → WARNING",
+          () => {
+            D().st = "warn";
+            pl(3);
+            addA(
+              104,
+              "WARNING",
+              "Footboard Object Detected",
+              "Ultrasonic · Camera · YOLOv8",
+              "foot",
+              "Warn in-bus and hold door closing.",
+            );
+            hl = "foot";
+          },
+        ],
+        [
+          "Driver health anomaly (simulated)",
+          () => {
+            D().hp = "anom";
+            pl(2, "crit");
+            hl = "hp";
+            ev(104, "Health anomaly detected (sim)");
+          },
+        ],
+        [
+          "CRITICAL alert → control room",
+          () => {
+            D().st = "crit";
+            D().foot = "crit";
+            pl(4, "crit");
+            em = { on: true, stage: 2, t: 0, ack: false, bus: 104 };
+            addA(
+              104,
+              "CRITICAL",
+              "Driver Health Anomaly Detected",
+              "ECG · HR · SpO₂ · MPU6050",
+              "hp",
+              "Trigger in-bus warning and automatic safety response.",
+            );
+          },
+        ],
+        [
+          "Automatic safety response — door closing",
+          () => {
+            D().door = "CLOSING";
+            em.stage = 3;
+            hl = "door";
+            setTimeout(() => {
+              D().door = "LOCKED";
+              render();
+            }, 1400);
+          },
+        ],
+        [
+          "Event added to timeline",
+          () => {
+            ev(104, "Automatic safety response executed");
+            hl = "";
+          },
+        ],
+        [
+          "Alert acknowledged",
+          () => {
+            ack();
+          },
+        ],
+        [
+          "Returning to monitoring mode",
+          () => {
+            bs.forEach((b) => {
+              b.st = "ok";
+              b.foot = "safe";
+              b.hp = "ok";
+              b.door = "SAFE";
+            });
+            em = { on: false, stage: 0, t: 0, ack: false, bus: 104 };
+            pl(-1);
+            hl = "";
+            ev(104, "System resolved — monitoring mode");
+            A.forEach((a) => {
+              if (a.bus == 104 && a.status != "NORMAL") a.status = "RESOLVED";
+            });
+          },
+        ],
+      ];
+      function runSim() {
+        if (running) return;
+        running = true;
+        $("#simb").disabled = true;
+        let i = 0;
+        const go = () => {
+          if (i >= STEPS.length) {
+            running = false;
+            $("#simb").disabled = false;
+            step = "";
+            render();
+            return;
+          }
+          step = `SIM STEP ${i + 1}/10 · ${STEPS[i][0]}`;
+          STEPS[i][1]();
+          render(i == 0);
+          i++;
+          setTimeout(go, 2300);
+        };
+        go();
+      }
+      /* canvases */
+      const ec = $("#ecg").getContext("2d"),
+        cm = $("#cam").getContext("2d"),
+        buf = new Array(240).fill(0);
+      let ph = 0,
+        fr = 0;
+      const gs = (x, c, w) => Math.exp(-((x - c) ** 2) / (2 * w * w));
+      const ecgv = (p) =>
+        0.12 * gs(p, 0.18, 0.03) -
+        0.15 * gs(p, 0.36, 0.012) +
+        gs(p, 0.4, 0.012) -
+        0.25 * gs(p, 0.44, 0.014) +
+        0.3 * gs(p, 0.65, 0.05);
+      function draw() {
+        fr++;
+        const b = B(sel),
+          an = b.hp == "anom";
+        ph += an ? 0.028 + Math.random() * 0.03 : 0.02;
+        if (ph >= 1) ph = 0;
+        buf.push(
+          ecgv(ph) * (an ? 0.6 + Math.random() * 0.8 : 1) +
+            (Math.random() - 0.5) * (an ? 0.12 : 0.02),
+        );
+        buf.shift();
+        ec.fillStyle = "#050a12";
+        ec.fillRect(0, 0, 400, 120);
+        ec.strokeStyle = "#12233a";
+        for (let x = 0; x < 400; x += 20) {
+          ec.beginPath();
+          ec.moveTo(x, 0);
+          ec.lineTo(x, 120);
+          ec.stroke();
+        }
+        ec.strokeStyle = an ? "#ff3b4e" : "#2fe08a";
+        ec.shadowColor = ec.strokeStyle;
+        ec.shadowBlur = 6;
+        ec.lineWidth = 1.6;
+        ec.beginPath();
+        buf.forEach((v, i) => {
+          const x = (i * 400) / 239,
+            y = 95 - v * 75;
+          i ? ec.lineTo(x, y) : ec.moveTo(x, y);
+        });
+        ec.stroke();
+        ec.shadowBlur = 0;
+        ec.fillStyle = "#7489a2";
+        ec.font = "10px monospace";
+        ec.fillText("ECG · SIMULATION", 8, 14);
+        /* camera */
+        const c = cm,
+          st = b.foot,
+          col = st == "safe" ? "#2fe08a" : st == "warn" ? "#ffb020" : "#ff3b4e";
+        const gr = c.createLinearGradient(0, 0, 0, 215);
+        gr.addColorStop(0, "#0a1420");
+        gr.addColorStop(1, "#101c2c");
+        c.fillStyle = gr;
+        c.fillRect(0, 0, 400, 215);
+        c.strokeStyle = "#15263a";
+        for (let i = 0; i < 8; i++) {
+          c.beginPath();
+          c.moveTo(200, 40);
+          c.lineTo(i * 57, 215);
+          c.stroke();
+        }
+        c.fillStyle = col + "22";
+        c.fillRect(50, 150, 300, 55);
+        c.setLineDash([6, 4]);
+        c.strokeStyle = col;
+        c.strokeRect(50, 150, 300, 55);
+        c.setLineDash([]);
+        c.font = "9px monospace";
+        c.fillStyle = col;
+        c.fillText(
+          "FOOTBOARD ZONE" + (st == "safe" ? " · CLEAR" : " · DANGER"),
+          56,
+          198,
+        );
+        c.fillText("SAFETY BOUNDARY", 56, 145);
+        if (st != "safe") {
+          const px = 200 + Math.sin(fr / 40) * 30,
+            py = 125;
+          c.fillStyle = "#3b5573";
+          c.beginPath();
+          c.arc(px, py - 38, 10, 0, 7);
+          c.fill();
+          c.fillRect(px - 14, py - 26, 28, 52);
+          c.strokeStyle = col;
+          c.lineWidth = 2;
+          c.strokeRect(px - 26, py - 54, 52, 98);
+          c.lineWidth = 1;
+          c.fillStyle = col;
+          c.fillRect(px - 26, py - 66, 108, 12);
+          c.fillStyle = "#000";
+          c.font = "bold 9px monospace";
+          c.fillText("PERSON · CONF: DEMO", px - 23, py - 57);
+        }
+        const sy = (fr * 2) % 215;
+        c.fillStyle = "#35c8ff18";
+        c.fillRect(0, sy, 400, 14);
+        c.fillStyle = "#35c8ff";
+        c.font = "10px monospace";
+        c.fillText("CAM-" + b.id + " · SIM", 8, 14);
+        c.fillText("YOLOv8 ACTIVE", 300, 14);
+        c.fillStyle = "#7489a2";
+        c.fillText(
+          "ULTRASONIC: " + (st == "safe" ? "CLEAR" : "TRIGGERED"),
+          8,
+          28,
+        );
+        mapTick();
+        requestAnimationFrame(draw);
+      }
+      /* 1s tick */
+      setInterval(() => {
+        clock++;
+        $("#clk").textContent = tstr();
+        $("#syn").textContent = 1 + (clock % 3);
+        if (em.on && !em.ack) em.t++;
+        const b = B(sel),
+          an = b.hp == "anom",
+          base = 68 + (sel % 7),
+          j = Math.round(Math.random() * 2 - 1);
+        const hv = an
+          ? [
+              132 + j,
+              "ABNORMAL (SIM)",
+              91 + j,
+              "IRREGULAR",
+              "IRREGULAR",
+              "crit",
+            ]
+          : [base + j, "NORMAL", 98, "STABLE", "NORMAL RHYTHM", "ok"];
+        $("#hg").innerHTML =
+          `<div class="${hv[5]}"><span class="lb">HEART RATE</span><br><span class="big">${hv[0]}</span> BPM<br><small style="color:var(--s)">${hv[1]}</small></div><div class="${hv[5]}"><span class="lb">SpO₂</span><br><span class="big">${hv[2]}</span>%<br><small style="color:var(--s)">${an ? "LOW (SIM)" : "NORMAL"}</small></div><div class="${hv[5]}"><span class="lb">MOTION · ECG</span><br><b>${hv[3]}</b><br><small style="color:var(--s)">${hv[4]}</small></div>`;
+        emRender();
+      }, 1000);
+      /* init */
+      $("#pipe").insertAdjacentHTML("beforeend", "");
+      render(true);
+      $("#hg").innerHTML = "";
+      draw();
+      // ================================
+      // CONNECT BACKEND BUS DATA
+      // ================================
+      async function loadBusData() {
+        try {
+          const response = await fetch("/api/buses");
+          const data = await response.json();
+
+          data.forEach((apiBus) => {
+            const bus = B(apiBus.id);
+
+            if (!bus) return;
+
+            bus.st =
+              {
+                NORMAL: "ok",
+                WARNING: "warn",
+                CRITICAL: "crit",
+              }[apiBus.status] || "ok";
+
+            bus.foot =
+              {
+                SAFE: "safe",
+                WARNING: "warn",
+                CRITICAL: "crit",
+              }[apiBus.footboard] || "safe";
+
+            bus.hp = apiBus.driverHealth === "ABNORMAL" ? "anom" : "ok";
+
+            bus.door = apiBus.door;
+          });
+
+          render(true);
+        } catch (error) {
+          console.error("Backend connection failed:", error);
+        }
+      }
+
+      loadBusData();
+      setInterval(loadBusData, 3000);
+    </script>
+  </body>
+</html>
+Security Warning: Script Execution Risk Invoke-WebRequest parses the content of
+the web page. Script code in the web page might be run when the page is parsed.
+RECOMMENDED ACTION: Use the -UseBasicParsing switch to avoid script code
+execution. Do you want to continue? [Y] Yes [A] Yes to All [N] No [L] No to All
+[S] Suspend [?] Help (default is "N"): y StatusCode : 200 StatusDescription : OK
+Content :
+[{"id":101,"status":"WARNING","footboard":"SAFE","driverHealth":"NORMAL","door":"OPEN"},{"
+id":102,"status":"WARNING","footboard":"WARNING","driverHealth":"NORMAL","door":"SAFE"},{"
+id":103,"status":"NO... RawContent : HTTP/1.1 200 OK Connection: keep-alive
+Keep-Alive: timeout=5 Content-Length: 354 Content-Type: application/json;
+charset=utf-8 Date: Wed, 30 Sep 2026 06:37:43 GMT ETag:
+W/"162-rnjlGAp0UKibmxy/we... Forms : {} Headers : {[Connection, keep-alive],
+[Keep-Alive, timeout=5], [Content-Length, 354], [Content-Type, application/json;
+charset=utf-8]...} Images : {} InputFields : {} Links : {} ParsedHtml :
+mshtml.HTMLDocumentClass RawContentLength : 354 PS
+C:\Users\vishn\OneDrive\Desktop\SMART MOVE>

@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SMART MOVE - Driver Health Simulator</title>
+
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background: #101820;
+        color: white;
+        text-align: center;
+        padding: 40px;
+      }
+
+      .container {
+        max-width: 500px;
+        margin: auto;
+        background: #1c2733;
+        padding: 30px;
+        border-radius: 15px;
+      }
+
+      h1 {
+        margin-bottom: 10px;
+      }
+
+      .status {
+        font-size: 28px;
+        font-weight: bold;
+        margin: 30px 0;
+      }
+
+      button {
+        width: 80%;
+        padding: 15px;
+        margin: 10px;
+        border: none;
+        border-radius: 8px;
+        font-size: 18px;
+        cursor: pointer;
+      }
+
+      .normal {
+        background: #2e9d5b;
+        color: white;
+      }
+
+      .abnormal {
+        background: #d64545;
+        color: white;
+      }
+
+      select {
+        padding: 12px;
+        font-size: 16px;
+        margin: 15px;
+      }
+
+      #message {
+        margin-top: 20px;
+        font-size: 16px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>🚍 SMART MOVE</h1>
+      <h2>Driver Health Simulator</h2>
+
+      <label>Select Bus:</label>
+
+      <select id="busId">
+        <option value="101">Bus 101</option>
+        <option value="102">Bus 102</option>
+        <option value="103">Bus 103</option>
+        <option value="104">Bus 104</option>
+      </select>
+
+      <div class="status" id="status">NORMAL</div>
+
+      <button class="normal" onclick="setHealth('NORMAL')">
+        🟢 Driver Normal
+      </button>
+
+      <button class="abnormal" onclick="setHealth('ABNORMAL')">
+        🔴 Driver Health Abnormal
+      </button>
+      <hr style="margin: 30px 0; border: 1px solid #444" />
+
+      <h2>Footboard Safety</h2>
+
+      <button class="normal" onclick="setFootboard('SAFE')">
+        🟢 Footboard Safe
+      </button>
+
+      <button class="abnormal" onclick="setFootboard('WARNING')">
+        🟠 Footboard Warning
+      </button>
+
+      <button class="abnormal" onclick="setFootboard('CRITICAL')">
+        🔴 Footboard Critical
+      </button>
+      <hr style="margin: 30px 0; border: 1px solid #444" />
+
+      <h2>Door Safety</h2>
+
+      <button class="normal" onclick="setDoor('SAFE')">🟢 Door Safe</button>
+
+      <button class="abnormal" onclick="setDoor('OPEN')">
+        🟠 Door Open / Warning
+      </button>
+
+      <button class="abnormal" onclick="setDoor('CRITICAL')">
+        🔴 Door Critical
+      </button>
+      <div id="message">Ready to simulate driver health.</div>
+    </div>
+
+    <script>
+      async function setHealth(health) {
+        const busId = document.getElementById("busId").value;
+
+        try {
+          const response = await fetch("/api/driver-health", {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json",
+            },
+
+            body: JSON.stringify({
+              busId: busId,
+              health: health,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || "Request failed");
+          }
+
+          document.getElementById("status").textContent = data.bus.driverHealth;
+
+          document.getElementById("message").textContent =
+            `Bus ${busId} driver health updated successfully.`;
+        } catch (error) {
+          document.getElementById("message").textContent =
+            "Error: " + error.message;
+
+          console.error(error);
+        }
+      }
+      async function setFootboard(footboard) {
+        const busId = document.getElementById("busId").value;
+
+        try {
+          const response = await fetch("/api/footboard", {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json",
+            },
+
+            body: JSON.stringify({
+              busId: busId,
+              footboard: footboard,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || "Request failed");
+          }
+
+          document.getElementById("message").textContent =
+            `Bus ${busId} footboard status updated to ${footboard}.`;
+
+          console.log(data);
+        } catch (error) {
+          document.getElementById("message").textContent =
+            "Error: " + error.message;
+
+          console.error(error);
+        }
+      }
+      async function setDoor(door) {
+        const busId = document.getElementById("busId").value;
+
+        try {
+          const response = await fetch("/api/door", {
+            method: "POST",
+
+            headers: {
+              "Content-Type": "application/json",
+            },
+
+            body: JSON.stringify({
+              busId: busId,
+              door: door,
+            }),
+          });
+
+          const data = await response.json();
+
+          if (!response.ok) {
+            throw new Error(data.message || "Request failed");
+          }
+
+          document.getElementById("message").textContent =
+            `Bus ${busId} door status updated to ${door}.`;
+
+          console.log(data);
+        } catch (error) {
+          document.getElementById("message").textContent =
+            "Error: " + error.message;
+
+          console.error(error);
+        }
+      }
+    </script>
+  </body>
+</html>
